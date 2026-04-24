@@ -130,10 +130,6 @@ def check_payment_status(reference):
         print(f"Status check error: {e}")
         return "error"
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
 with app.app_context():
     db.create_all()
     if not User.query.filter_by(is_admin=True).first():
