@@ -14,19 +14,16 @@ from datetime import datetime
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-me')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///thesubject.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
 
 db = SQLAlchemy(app)
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day"]
-)
+limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["200 per day"])
 CORS(app, supports_credentials=True, origins=[os.getenv('FRONTEND_URL', '*')])
 ph = PasswordHasher()
 
@@ -50,8 +47,7 @@ class Product(db.Model):
     category = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
-    image_url = db.Column(db.String(500))
-    is_active = db.Column(db.Boolean, default=True)
+    image_url = db.Column(db.String(500))    is_active = db.Column(db.Boolean, default=True)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,8 +71,7 @@ def get_momo_access_token():
             'Ocp-Apim-Subscription-Key': MOMO_API_KEY,
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        url = f"{MOMO_BASE_URL}/collection/token/"
-        response = requests.post(url, headers=headers)
+        response = requests.post(f"{MOMO_BASE_URL}/collection/token/", headers=headers)
         response.raise_for_status()
         return response.json().get('access_token')
     except Exception as e:
@@ -97,13 +92,12 @@ def initiate_momo_payment(amount, phone, external_id):
         }
         payload = {
             "amount": str(amount),
-            "currency": "UGX",            "externalId": external_id,
+            "currency": "UGX",
+            "externalId": external_id,
             "payer": {"partyIdType": "MSISDN", "partyId": phone},
             "payerMessage": "The Subject Shop",
-            "payeeNote": "Thank you!"
-        }
-        url = f"{MOMO_BASE_URL}/collection/v1_0/requesttopay"
-        response = requests.post(url, json=payload, headers=headers)
+            "payeeNote": "Thank you!"        }
+        response = requests.post(f"{MOMO_BASE_URL}/collection/v1_0/requesttopay", json=payload, headers=headers)
         if response.status_code == 202:
             ref = response.headers.get('X-Reference-Id')
             return {"status": "initiated", "reference": ref}
@@ -122,26 +116,36 @@ def check_payment_status(reference):
             'X-Target-Environment': MOMO_TARGET_ENV,
             'Ocp-Apim-Subscription-Key': MOMO_API_KEY
         }
-        url = f"{MOMO_BASE_URL}/collection/v1_0/requesttopay/{reference}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(f"{MOMO_BASE_URL}/collection/v1_0/requesttopay/{reference}", headers=headers)
         data = response.json()
         return data.get('financialTransactionStatus', 'UNKNOWN')
     except Exception as e:
         print(f"Status check error: {e}")
         return "error"
 
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# Initialize database and create admin user
 with app.app_context():
     db.create_all()
-    if not User.query.filter_by(is_admin=True).first():
-        admin = User(
-            username='Admin',
-            email=os.getenv('ADMIN_EMAIL', 'admin@thesubject.com'),
-            password_hash=ph.hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
-            is_admin=True
-        )
-        db.session.add(admin)
+    
+    # Delete old admin to fix password hash mismatch
+    old_admin = User.query.filter_by(is_admin=True).first()
+    if old_admin:
+        db.session.delete(old_admin)
         db.session.commit()
-
+    
+    # Create fresh admin with new password hash
+    admin = User(
+        username='Admin',
+        email=os.getenv('ADMIN_EMAIL', 'admin@thesubject.com'),
+        password_hash=ph.hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
+        is_admin=True
+    )
+    db.session.add(admin)
+    db.session.commit()
 @app.route('/api/auth/register', methods=['POST'])
 @limiter.limit("3 per minute")
 def register():
@@ -190,9 +194,9 @@ def get_products():
         for p in products:
             result.append({
                 "id": p.id,
-                "name": p.name,
-                "category": p.category,
-                "price": p.price,                "stock": p.stock,
+                "name": p.name,                "category": p.category,
+                "price": p.price,
+                "stock": p.stock,
                 "image": p.image_url
             })
         return jsonify(result)
@@ -239,8 +243,7 @@ def place_order():
             status='pending'
         )
         db.session.add(order)
-        db.session.flush()
-        if method in ['mtn', 'airtel']:
+        db.session.flush()        if method in ['mtn', 'airtel']:
             payment_result = initiate_momo_payment(total, data.get('phone'), str(order.id))
             if 'error' in payment_result:
                 db.session.rollback()
@@ -289,9 +292,9 @@ def get_admin_orders():
     try:
         orders = Order.query.order_by(Order.created_at.desc()).limit(50).all()
         result = []
-        for o in orders:
-            result.append({
-                "id": o.id,                "fullName": o.full_name,
+        for o in orders:            result.append({
+                "id": o.id,
+                "fullName": o.full_name,
                 "phone": o.phone,
                 "total": o.total_amount,
                 "status": o.status,
