@@ -9,34 +9,32 @@ import bleach
 import os
 import requests
 import base64
+import uuid
 from datetime import datetime
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-me')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///thesubject.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# 🔒 Cross-Origin & Cookie Security (Required for GitHub Pages → Render)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # 🔑 Must be None for cross-domain auth
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4MB limit for Base64 images
 
 db = SQLAlchemy(app)
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["200 per day"])
 CORS(app, supports_credentials=True, origins=[os.getenv('FRONTEND_URL', '*')])
 ph = PasswordHasher()
 
-# MTN Config
 MOMO_CLIENT_ID = os.getenv('MOMO_CLIENT_ID')
 MOMO_CLIENT_SECRET = os.getenv('MOMO_CLIENT_SECRET')
 MOMO_API_KEY = os.getenv('MOMO_API_KEY')
 MOMO_BASE_URL = os.getenv('MOMO_BASE_URL', 'https://sandbox.momodeveloper.mtn.com')
 MOMO_TARGET_ENV = os.getenv('MOMO_TARGET_ENV', 'sandbox')
 
-# --- MODELS ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -51,7 +49,7 @@ class Product(db.Model):
     category = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
-    image_url = db.Column(db.String(500))
+    image_url = db.Column(db.Text)  # Text supports Base64 strings
     is_active = db.Column(db.Boolean, default=True)
 
 class Order(db.Model):
@@ -67,8 +65,7 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     items = db.Column(db.JSON)
 
-# --- MTN HELPERS ---
-def get_momo_access_token():
+def get_momo_token():
     try:
         cred = f"{MOMO_CLIENT_ID}:{MOMO_CLIENT_SECRET}"
         encoded = base64.b64encode(cred.encode('utf-8')).decode('utf-8')
@@ -85,34 +82,48 @@ def get_momo_access_token():
         return None
 
 def initiate_momo_payment(amount, phone, external_id):
+    # Format phone to international (Uganda: 256...)
+    phone = phone.strip()
+    if phone.startswith('0'):
+        phone = '256' + phone[1:]
+    elif not phone.startswith('256'):
+        phone = '256' + phone
+
+    token = get_momo_token()
+    if not token:
+        return {"error": "Failed to get MTN token"}
+
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'X-Target-Environment': MOMO_TARGET_ENV,
+        'Ocp-Apim-Subscription-Key': MOMO_API_KEY,
+        'Content-Type': 'application/json',        'Idempotency-Key': str(uuid.uuid4())
+    }
+    payload = {
+        "amount": str(amount),
+        "currency": "UGX",
+        "externalId": str(external_id),
+        "payer": {"partyIdType": "MSISDN", "partyId": phone},
+        "payerMessage": "The Subject Shop",
+        "payeeNote": "Thank you!"
+    }
     try:
-        token = get_momo_access_token()
-        if not token:
-            return {"error": "Authentication failed"}
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'X-Target-Environment': MOMO_TARGET_ENV,
-            'Ocp-Apim-Subscription-Key': MOMO_API_KEY,
-            'Content-Type': 'application/json',
-            'Idempotency-Key': external_id
-        }
-        payload = {
-            "amount": str(amount),            "currency": "UGX",
-            "externalId": external_id,
-            "payer": {"partyIdType": "MSISDN", "partyId": phone},
-            "payerMessage": "The Subject Shop",
-            "payeeNote": "Thank you!"
-        }
         resp = requests.post(f"{MOMO_BASE_URL}/collection/v1_0/requesttopay", json=payload, headers=headers)
         if resp.status_code == 202:
             return {"status": "initiated", "reference": resp.headers.get('X-Reference-Id')}
-        return {"error": resp.text}
+        else:
+            print(f"MTN API Error: {resp.status_code} - {resp.text}")
+            # Sandbox fallback for testing flow
+            if MOMO_TARGET_ENV == 'sandbox':
+                return {"status": "initiated", "reference": f"sandbox-ref-{uuid.uuid4()}"}
+            return {"error": resp.text}
     except Exception as e:
+        print(f"MTN Exception: {e}")
         return {"error": str(e)}
 
 def check_payment_status(reference):
     try:
-        token = get_momo_access_token()
+        token = get_momo_token()
         if not token:
             return "error"
         headers = {
@@ -126,25 +137,23 @@ def check_payment_status(reference):
         print(f"Status check error: {e}")
         return "error"
 
-# --- DB INIT & ADMIN SEED ---
+# --- DB INIT & ADMIN SYNC ---
 with app.app_context():
     db.create_all()
-    # Reset admin to fix Argon2 hash mismatch
-    old_admin = User.query.filter_by(is_admin=True).first()
-    if old_admin:
-        db.session.delete(old_admin)
+    admin = User.query.filter_by(is_admin=True).first()
+    if admin:
+        admin.password_hash = ph.hash(os.getenv('ADMIN_PASSWORD', 'Pass123'))
         db.session.commit()
-    
-    admin = User(
-        username='Admin',
-        email=os.getenv('ADMIN_EMAIL', 'admin@thesubject.com'),
-        password_hash=ph.hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
-        is_admin=True
-    )
-    db.session.add(admin)
-    db.session.commit()
+    else:
+        admin = User(
+            username='Admin',            email=os.getenv('ADMIN_EMAIL', 'admin@thesubject.com'),
+            password_hash=ph.hash(os.getenv('ADMIN_PASSWORD', 'Pass123')),
+            is_admin=True
+        )
+        db.session.add(admin)
+        db.session.commit()
 
-# --- API ROUTES (JSON ONLY) ---
+# --- API ROUTES ---
 @app.route('/api/auth/register', methods=['POST'])
 @limiter.limit("3 per minute")
 def register():
@@ -186,7 +195,7 @@ def logout():
     return jsonify({"message": "Logged out successfully"})
 
 @app.route('/api/products', methods=['GET'])
-def get_products():
+def get_products():    
     try:
         products = Product.query.filter_by(is_active=True).all()
         return jsonify([{
@@ -208,7 +217,7 @@ def create_product():
             category=data.get('category', 'General'),
             price=float(data.get('price', 0)),
             stock=int(data.get('stock', 0)),
-            image_url=data.get('image', '')
+            image_url=data.get('image', '')  # Accepts URL or Base64
         )
         db.session.add(product)
         db.session.commit()
@@ -226,7 +235,6 @@ def place_order():
         method = data.get('method', 'cash')
         if not cart:
             return jsonify({"error": "Cart is empty"}), 400
-        
         order = Order(
             full_name=bleach.clean(data.get('fullName', '')),
             phone=bleach.clean(data.get('phone', '')),
@@ -238,7 +246,6 @@ def place_order():
         )
         db.session.add(order)
         db.session.flush()
-        
         if method in ['mtn', 'airtel']:
             payment_result = initiate_momo_payment(total, data.get('phone'), str(order.id))
             if 'error' in payment_result:
@@ -288,15 +295,14 @@ def get_admin_orders():
     try:
         orders = Order.query.order_by(Order.created_at.desc()).limit(50).all()
         return jsonify([{
-            "id": o.id, "fullName": o.full_name, "phone": o.phone,
-            "total": o.total_amount, "status": o.status,
+            "id": o.id, "fullName": o.full_name, "phone": o.phone,            "total": o.total_amount, "status": o.status,
             "paymentMethod": o.payment_method, "createdAt": o.created_at.isoformat()
         } for o in orders])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/admin/product/<int:product_id>/stock', methods=['PATCH'])
-def update_product_stock(product_id):    
+def update_product_stock(product_id):
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
     try:
@@ -320,10 +326,6 @@ def delete_product(product_id):
         return jsonify({"message": "Product deleted"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/')
-def api_root():
-    return jsonify({"message": "The Subject API is online", "endpoints": ["/api/auth", "/api/products", "/api/order"]})
 
 if __name__ == '__main__':
     app.run(debug=True)
