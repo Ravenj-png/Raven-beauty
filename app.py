@@ -196,7 +196,8 @@ def get_products():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/admin/product', methods=['POST'])@limiter.limit("20 per hour")
+@app.route('/api/admin/product', methods=['POST'])
+@limiter.limit("20 per hour")
 def create_product():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
