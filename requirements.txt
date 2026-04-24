@@ -4,6 +4,7 @@ Flask-Limiter==3.5.0
 Flask-CORS==4.0.0
 argon2-cffi==23.1.0
 python-dotenv==1.0.0
+bleach==6.1.0
 requests==2.31.0
 gunicorn==21.2.0
-bleach==6.1.0
+psycopg2-binary==2.9.9
