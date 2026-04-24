@@ -321,5 +321,9 @@ def delete_product(product_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/')
+def api_root():
+    return jsonify({"message": "The Subject API is online", "endpoints": ["/api/auth", "/api/products", "/api/order"]})
+
 if __name__ == '__main__':
     app.run(debug=True)
