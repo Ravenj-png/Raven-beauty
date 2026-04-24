@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>The Subject | Login to Shop</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Subject | Premium Beauty & Skincare</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -164,8 +164,9 @@
 </div>
 
 <script>
-// Config
-const API_URL = 'https://raven-beauty.onrender.com'; // Works with Flask on same domain
+// 🔑 CONFIGURATION - UPDATE THIS WITH YOUR RENDER URL
+const API_URL = 'https://raven-beauty.onrender.com';
+
 let currentUser = null;
 let cart = JSON.parse(localStorage.getItem('ts_cart') || '[]');
 let currentFilter = 'all';
@@ -174,7 +175,11 @@ let pollInterval = null;
 
 // Secure Fetch Wrapper
 async function api(endpoint, method = 'GET', body = null) {
-    const opts = { method, credentials: 'include', headers: { 'Content-Type': 'application/json' } };
+    const opts = { 
+        method, 
+        credentials: 'include', 
+        headers: { 'Content-Type': 'application/json' }
+    };
     if (body) opts.body = JSON.stringify(body);
     
     try {
@@ -188,13 +193,14 @@ async function api(endpoint, method = 'GET', body = null) {
     }
 }
 
-// Auth
-function switchAuthTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+// Auth Functions
+function switchAuthTab(tab) {    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
     document.querySelector(`.auth-tab[data-tab="${tab}"]`).classList.add('active');
     document.getElementById('loginForm').classList.toggle('active', tab === 'login');
     document.getElementById('registerForm').classList.toggle('active', tab === 'register');
-}document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => switchAuthTab(t.dataset.tab)));
+}
+
+document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => switchAuthTab(t.dataset.tab)));
 
 document.getElementById('doLoginBtn').addEventListener('click', async () => {
     const btn = document.getElementById('doLoginBtn');
@@ -237,13 +243,13 @@ document.getElementById('doRegisterBtn').addEventListener('click', async () => {
         switchAuthTab('login');
         document.getElementById('loginEmail').value = document.getElementById('regEmail').value;
     } catch (e) {
-        err.innerText = e.message;
-    } finally {
+        err.innerText = e.message;    } finally {
         btn.disabled = false; btn.innerText = 'Register';
     }
 });
 
-function proceedAfterLogin() {    document.getElementById('authPanel').style.display = 'none';
+function proceedAfterLogin() {
+    document.getElementById('authPanel').style.display = 'none';
     document.getElementById('storeUI').classList.add('visible');
     setupUI();
     loadProducts();
@@ -286,13 +292,13 @@ function displayProducts(products) {
     if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm));
     
     const grid = document.getElementById('productsGrid');
-    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;">No products found</div>'; return; }
-    
+    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;">No products found</div>'; return; }    
     grid.innerHTML = filtered.map(p => `
         <div class="product-card">
             <img src="${p.image}" class="product-image" onerror="this.src='https://placehold.co/400x400/gray/white?text=No+Image'">
             <div class="product-info">
-                <div class="product-category">${p.category}</div>                <div class="product-name">${p.name}</div>
+                <div class="product-category">${p.category}</div>
+                <div class="product-name">${p.name}</div>
                 <div class="product-price">UGX ${p.price.toLocaleString()}</div>
                 <div class="product-stock">Stock: ${p.stock} ${p.stock === 0 ? '<span class="out-of-stock">(Out)</span>' : ''}</div>
                 ${currentUser?.isAdmin ? `
@@ -335,13 +341,13 @@ document.getElementById('searchInput').addEventListener('input', e => {
 
 // Cart
 function saveCart() { localStorage.setItem('ts_cart', JSON.stringify(cart)); }
-function updateCartUI() {
-    const container = document.getElementById('cartItems');
+function updateCartUI() {    const container = document.getElementById('cartItems');
     const count = document.getElementById('cartCount');
     const total = document.getElementById('cartTotalAmount');
     
     if (currentUser?.isAdmin) {
-        count.innerText = '0'; container.innerHTML = '<div class="empty-cart">Admin cannot place orders</div>'; total.innerText = 'UGX 0'; return;    }
+        count.innerText = '0'; container.innerHTML = '<div class="empty-cart">Admin cannot place orders</div>'; total.innerText = 'UGX 0'; return;
+    }
     
     let totalItems = cart.reduce((s, i) => s + (i.quantity || 1), 0);
     count.innerText = totalItems;
@@ -370,27 +376,30 @@ function updateCartUI() {
 }
 
 function addToCart(id) {
-    // In prod, fetch current stock from API to prevent race conditions
-    const prod = JSON.parse(localStorage.getItem('ts_products') || '[]').find(p => p.id === id);
-    if (!prod || prod.stock <= 0) { alert('Out of stock!'); return; }
-    
-    let existing = cart.find(i => i.id === id);
-    if (existing) {
-        if (existing.quantity + 1 > prod.stock) { alert(`Only ${prod.stock} left`); return; }
-        existing.quantity++;
-    } else {
-        cart.push({ ...prod, quantity: 1 });
-    }
-    saveCart(); updateCartUI();
+    fetch(`${API_URL}/api/products`).then(r => r.json()).then(products => {
+        const prod = products.find(p => p.id === id);
+        if (!prod || prod.stock <= 0) { alert('Out of stock!'); return; }
+        
+        let existing = cart.find(i => i.id === id);
+        if (existing) {
+            if (existing.quantity + 1 > prod.stock) { alert(`Only ${prod.stock} left`); return; }
+            existing.quantity++;
+        } else {
+            cart.push({ ...prod, quantity: 1 });
+        }
+        saveCart(); updateCartUI();
+    });
 }
 function changeQty(idx, delta) {
     cart[idx].quantity += delta;
     if (cart[idx].quantity <= 0) cart.splice(idx, 1);
     saveCart(); updateCartUI();
 }
+
 function removeFromCart(idx) {
     cart.splice(idx, 1); saveCart(); updateCartUI();
 }
+
 // Checkout
 document.getElementById('checkoutBtn').addEventListener('click', openCheckoutModal);
 document.getElementById('closeCartBtn').addEventListener('click', closeCart);
@@ -405,6 +414,7 @@ function openCheckoutModal() {
     document.getElementById('overlay').classList.add('show');
     document.getElementById('paymentMethod').dispatchEvent(new Event('change'));
 }
+
 function closeCheckoutModal() {
     document.getElementById('checkoutModal').classList.remove('show');
     document.getElementById('overlay').classList.remove('show');
@@ -429,8 +439,7 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     try {
         const data = await api('/api/order', 'POST', {
             cart,
-            total: cart.reduce((s, i) => s + i.price * (i.quantity || 1), 0),
-            method: document.getElementById('paymentMethod').value,
+            total: cart.reduce((s, i) => s + i.price * (i.quantity || 1), 0),            method: document.getElementById('paymentMethod').value,
             fullName: document.getElementById('fullName').value,
             phone: document.getElementById('phoneNumber').value,
             address: document.getElementById('address').value
@@ -439,7 +448,8 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
         if (data.status === 'initiated') {
             statusBox.style.display = 'block';
             statusBox.innerHTML = `<span class="status-spinner"></span> Check your phone for PIN prompt...`;
-            startPolling(data.orderId);        } else {
+            startPolling(data.orderId);
+        } else {
             cart = []; saveCart(); updateCartUI(); closeCheckoutModal();
             alert('Order placed successfully!');
         }
@@ -472,23 +482,30 @@ function stopPolling() {
     pollInterval = null;
 }
 
-// Admin Actions (Stubbed for backend integration)
+// Admin Actions
 async function updateStock(id, delta) {
-    // Add backend route later: POST /api/admin/product/{id}/stock
-    alert('Stock update requires backend endpoint. Add to Flask.');
+    try {
+        await api(`/api/admin/product/${id}/stock`, 'PATCH', { delta });
+        loadProducts();
+    } catch(e) { alert(e.message); }
 }
 async function deleteProduct(id) {
     if(!confirm('Delete this product?')) return;
-    // Add backend route later: DELETE /api/admin/product/{id}
-    alert('Delete requires backend endpoint.');
+    try {
+        await api(`/api/admin/product/${id}`, 'DELETE');
+        loadProducts();
+    } catch(e) { alert(e.message); }
 }
+
 function openCreateProductModal() {
     document.getElementById('createProductModal').classList.add('show');
     document.getElementById('overlay').classList.add('show');
 }
+
 document.getElementById('confirmCreateProduct').addEventListener('click', async () => {
     const btn = document.getElementById('confirmCreateProduct');
-    btn.disabled = true; btn.innerText = 'Creating...';    try {
+    btn.disabled = true; btn.innerText = 'Creating...';
+    try {
         await api('/api/admin/product', 'POST', {
             name: document.getElementById('newProductName').value,
             category: document.getElementById('newProductCategory').value,
@@ -502,15 +519,41 @@ document.getElementById('confirmCreateProduct').addEventListener('click', async 
     } catch(e) { alert(e.message); }
     finally { btn.disabled = false; btn.innerText = 'Add Product'; }
 });
+
 function closeCreateProductModal() {
     document.getElementById('createProductModal').classList.remove('show');
     document.getElementById('overlay').classList.remove('show');
 }
-function openAdminDataModal() { document.getElementById('adminDataModal').classList.add('show'); document.getElementById('overlay').classList.add('show'); loadAdminData(); }
-function closeAdminDataModal() { document.getElementById('adminDataModal').classList.remove('show'); document.getElementById('overlay').classList.remove('show'); }
-function loadAdminData() {
-    // Add backend route later: GET /api/admin/orders
-    document.getElementById('adminOrdersList').innerHTML = '<p>Connect /api/admin/orders to Flask backend</p>';
+
+function openAdminDataModal() { 
+    document.getElementById('adminDataModal').classList.add('show'); 
+    document.getElementById('overlay').classList.add('show'); 
+    loadAdminData(); 
+}
+
+function closeAdminDataModal() { 
+    document.getElementById('adminDataModal').classList.remove('show'); 
+    document.getElementById('overlay').classList.remove('show'); 
+}
+
+async function loadAdminData() {
+    try {        const orders = await api('/api/admin/orders');
+        const list = document.getElementById('adminOrdersList');
+        if (orders.length === 0) {
+            list.innerHTML = '<p>No orders yet</p>';
+            return;
+        }
+        list.innerHTML = orders.map(o => `
+            <div style="border:1px solid #e5e7eb; padding:12px; margin-bottom:8px; border-radius:8px;">
+                <div><strong>Order #${o.id}</strong> - ${o.status}</div>
+                <div>${o.fullName} | ${o.phone}</div>
+                <div>UGX ${o.total.toLocaleString()} | ${o.paymentMethod}</div>
+                <div style="font-size:12px; color:#64748b;">${new Date(o.createdAt).toLocaleString()}</div>
+            </div>
+        `).join('');
+    } catch(e) {
+        document.getElementById('adminOrdersList').innerHTML = '<p style="color:red;">Failed to load orders</p>';
+    }
 }
 
 // Overlay Close
