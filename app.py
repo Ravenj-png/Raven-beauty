@@ -141,7 +141,7 @@ with app.app_context():
         if result.scalar() != 'text':
             db.session.execute(text("ALTER TABLE product ALTER COLUMN image_url TYPE TEXT;"))
             db.session.commit()
-            print("✅ Database migration: image_url column updated to TEXT")
+            print(" Database migration: image_url column updated to TEXT")
     except Exception as e:
         print(f"Migration note: {e}")
 
