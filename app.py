@@ -22,7 +22,7 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4MB limit for Base64 images
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
 
 db = SQLAlchemy(app)
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["200 per day"])
@@ -49,7 +49,7 @@ class Product(db.Model):
     category = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
-    image_url = db.Column(db.Text)  # Text supports Base64 strings
+    image_url = db.Column(db.Text)  # CHANGED TO TEXT
     is_active = db.Column(db.Boolean, default=True)
 
 class Order(db.Model):
@@ -82,7 +82,6 @@ def get_momo_token():
         return None
 
 def initiate_momo_payment(amount, phone, external_id):
-    # Format phone to international (Uganda: 256...)
     phone = phone.strip()
     if phone.startswith('0'):
         phone = '256' + phone[1:]
@@ -97,8 +96,8 @@ def initiate_momo_payment(amount, phone, external_id):
         'Authorization': f'Bearer {token}',
         'X-Target-Environment': MOMO_TARGET_ENV,
         'Ocp-Apim-Subscription-Key': MOMO_API_KEY,
-        'Content-Type': 'application/json',        'Idempotency-Key': str(uuid.uuid4())
-    }
+        'Content-Type': 'application/json',
+        'Idempotency-Key': str(uuid.uuid4())    }
     payload = {
         "amount": str(amount),
         "currency": "UGX",
@@ -113,7 +112,6 @@ def initiate_momo_payment(amount, phone, external_id):
             return {"status": "initiated", "reference": resp.headers.get('X-Reference-Id')}
         else:
             print(f"MTN API Error: {resp.status_code} - {resp.text}")
-            # Sandbox fallback for testing flow
             if MOMO_TARGET_ENV == 'sandbox':
                 return {"status": "initiated", "reference": f"sandbox-ref-{uuid.uuid4()}"}
             return {"error": resp.text}
@@ -146,12 +144,25 @@ with app.app_context():
         db.session.commit()
     else:
         admin = User(
-            username='Admin',            email=os.getenv('ADMIN_EMAIL', 'admin@thesubject.com'),
-            password_hash=ph.hash(os.getenv('ADMIN_PASSWORD', 'Pass123')),
+            username='Admin',
+            email=os.getenv(),
+            password_hash=ph.hash(os.getenv()),            
             is_admin=True
         )
         db.session.add(admin)
         db.session.commit()
+
+# --- TEMPORARY MIGRATION ROUTE (DELETE AFTER USE) ---
+@app.route('/api/fix-db-column', methods=['GET'])
+def fix_db_column():
+    from sqlalchemy import text
+    with app.app_context():
+        try:
+            db.session.execute(text("ALTER TABLE product ALTER COLUMN image_url TYPE TEXT"))
+            db.session.commit()
+            return jsonify({"message": "Column updated to TEXT"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 # --- API ROUTES ---
 @app.route('/api/auth/register', methods=['POST'])
@@ -195,7 +206,7 @@ def logout():
     return jsonify({"message": "Logged out successfully"})
 
 @app.route('/api/products', methods=['GET'])
-def get_products():    
+def get_products():
     try:
         products = Product.query.filter_by(is_active=True).all()
         return jsonify([{
@@ -217,7 +228,7 @@ def create_product():
             category=data.get('category', 'General'),
             price=float(data.get('price', 0)),
             stock=int(data.get('stock', 0)),
-            image_url=data.get('image', '')  # Accepts URL or Base64
+            image_url=data.get('image', '')
         )
         db.session.add(product)
         db.session.commit()
@@ -285,8 +296,7 @@ def check_order_status(order_id):
                 db.session.commit()
                 return jsonify({"status": "failed"})
         return jsonify({"status": order.status})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as e:        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/admin/orders', methods=['GET'])
 def get_admin_orders():
@@ -295,7 +305,8 @@ def get_admin_orders():
     try:
         orders = Order.query.order_by(Order.created_at.desc()).limit(50).all()
         return jsonify([{
-            "id": o.id, "fullName": o.full_name, "phone": o.phone,            "total": o.total_amount, "status": o.status,
+            "id": o.id, "fullName": o.full_name, "phone": o.phone,
+            "total": o.total_amount, "status": o.status,
             "paymentMethod": o.payment_method, "createdAt": o.created_at.isoformat()
         } for o in orders])
     except Exception as e:
