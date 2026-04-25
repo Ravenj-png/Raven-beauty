@@ -43,7 +43,7 @@
         </div>
     </header>
     <section class="hero"><div class="container"><h1 class="hero-title">Find Your Signature Scent</h1><button class="btn" id="shopNowBtn">Shop Now</button></div></section>
-    <section class="products-section"><div class="container"><div class="section-header"><h2>🔥 Products</h2><div class="category-filters" id="filterContainer"></div></div><div class="products-grid" id="productsGrid"></div></div></section>
+    <section class="products-section"><div class="container"><div class="section-header"><h2>Products</h2><div class="category-filters" id="filterContainer"></div></div><div class="products-grid" id="productsGrid"></div></div></section>
     <div class="cart-sidebar" id="cartSidebar"><div class="cart-header"><h3>Your Cart</h3><button class="close-cart" id="closeCartBtn">&times;</button></div><div class="cart-items" id="cartItems"><div class="empty-cart">Empty</div></div><div class="cart-footer"><div class="cart-total"><span>Total:</span><span id="cartTotalAmount">UGX 0</span></div><button class="btn" id="checkoutBtn">Checkout</button></div></div>
     <div class="modal" id="checkoutModal"><div class="modal-content"><div class="modal-header"><h3>Checkout</h3><button class="close-modal" id="closeModalBtn">&times;</button></div><form id="checkoutForm">
         <div class="form-group"><label>Full Name</label><input type="text" id="fullName" required></div>
@@ -121,12 +121,12 @@ function proceedAfterLogin(){document.getElementById('authPanel').style.display=
 function setupUI(){
     const l=document.getElementById('authLinks');
     if(currentUser.isAdmin){
-        l.innerHTML=`<span>👋 Admin</span> <a id="logoutBtn">Logout</a> <a id="adminDataBtn">Dashboard</a>`;
+        l.innerHTML=`<span>Admin</span> <a id="logoutBtn">Logout</a> <a id="adminDataBtn">Dashboard</a>`;
         document.getElementById('floatingCreateProduct').style.display='block';document.getElementById('cartIcon').style.display='none';
         document.getElementById('adminDataBtn')?.addEventListener('click',()=>{document.getElementById('adminDataModal').classList.add('show');document.getElementById('overlay').classList.add('show');loadAdminData();});
         document.getElementById('floatingCreateProduct').addEventListener('click',()=>{document.getElementById('createProductModal').classList.add('show');document.getElementById('overlay').classList.add('show');});
     }else{
-        l.innerHTML=`<span>👋 User</span> <a id="logoutBtn">Logout</a>`;
+        l.innerHTML=`<span>User</span> <a id="logoutBtn">Logout</a>`;
         document.getElementById('floatingCreateProduct').style.display='none';document.getElementById('cartIcon').style.display='block';
     }
     document.getElementById('logoutBtn').addEventListener('click',async()=>{try{await api('/api/auth/logout','POST');}catch(e){}window.location.reload();});
@@ -192,7 +192,7 @@ document.getElementById('checkoutForm').addEventListener('submit',async e=>{
         else{cart=[];saveCart();updateCartUI();closeCheckout();alert('Order placed!');}
     }catch(err){alert(err.message);}finally{b.disabled=false;b.innerText='Place Order';}
 });
-function startPolling(id){if(pollInterval)clearInterval(pollInterval);pollInterval=setInterval(async()=>{try{const r=await api(`/api/order/status/${id}`);if(r.status==='paid'){stopPolling();cart=[];saveCart();updateCartUI();closeCheckout();alert('✅ Payment confirmed!');}else if(r.status==='failed'){stopPolling();document.getElementById('paymentStatusBox').innerHTML='<span style="color:#ef4444;">❌ Failed</span>';}}catch(e){}},5000);}
+function startPolling(id){if(pollInterval)clearInterval(pollInterval);pollInterval=setInterval(async()=>{try{const r=await api(`/api/order/status/${id}`);if(r.status==='paid'){stopPolling();cart=[];saveCart();updateCartUI();closeCheckout();alert('Payment confirmed!');}else if(r.status==='failed'){stopPolling();document.getElementById('paymentStatusBox').innerHTML='<span style="color:#ef4444;"> Failed</span>';}}catch(e){}},5000);}
 function stopPolling(){if(pollInterval)clearInterval(pollInterval);pollInterval=null;}
 async function updateStock(id,d){try{await api(`/api/admin/product/${id}/stock`,'PATCH',{delta:d});loadProducts();}catch(e){alert(e.message);}}
 async function deleteProduct(id){if(!confirm('Delete?'))return;try{await api(`/api/admin/product/${id}`,'DELETE');loadProducts();}catch(e){alert(e.message);}}
