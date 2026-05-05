@@ -153,8 +153,8 @@ with app.app_context():
     else:
         admin = User(
             username='Admin',
-            email=os.getenv(),
-            password_hash=ph.hash(os.getenv()),
+            email=os.getenv('ADMIN_EMAIL'),
+            password_hash=ph.hash(os.getenv('ADMIN_PASSWORD')),
             is_admin=True
         )
         db.session.add(admin)
