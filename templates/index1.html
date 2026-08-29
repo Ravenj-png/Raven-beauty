@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixed Pay - Bursar Dashboard</title>
+    <style>
+        /* --- RESET & BASE STYLES --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f3f4f6; color: #1f2937; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        /* --- MOBILE PHONE FRAME --- */
+        .phone-frame {
+            background: #ffffff;
+            width: 100%;
+            max-width: 390px;
+            height: 844px; /* iPhone 12/13 height */
+            max-height: 90vh;
+            border-radius: 36px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            border: 8px solid #111827;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 24px 20px 20px;
+        }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+        .offline-badge { background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .offline-badge::before { content: ''; width: 6px; height: 6px; background: #10b981; border-radius: 50%; }
+        .school-name { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+
+        /* --- STATS CARDS --- */
+        .stats-container { display: flex; gap: 12px; margin-top: 20px; }
+        .stat-card { flex: 1; background: rgba(255,255,255,0.15); padding: 12px; border-radius: 12px; backdrop-filter: blur(10px); }
+        .stat-label { font-size: 10px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+        /* --- MAIN CONTENT --- */
+        .content { flex: 1; padding: 20px; overflow-y: auto; }
+        .section-title { font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; display: flex; justify-content: space-between; }
+        
+        /* --- STUDENT LIST --- */
+        .student-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .student-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px; background: #f9fafb; border-radius: 12px;
+            border: 1px solid #e5e7eb; transition: all 0.3s ease;
+        }
+        .student-info h4 { font-size: 14px; font-weight: 600; color: #111827; }
+        .student-info p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        
+        /* --- STATUS BADGES --- */
+        .badge { padding: 6px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+        .badge-paid { background: #d1fae5; color: #065f46; }
+        .badge-pending { background: #fee2e2; color: #991b1b; }
+
+        /* --- FLOATING ACTION BUTTON --- */
+        .fab {
+            position: absolute; bottom: 24px; right: 24px;
+            background: #2563eb; color: white; border: none;
+            width: 56px; height: 56px; border-radius: 50%;
+            font-size: 24px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.95); }
+
+        /* --- MODAL (RECONCILE) --- */
+        .modal-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            justify-content: center; align-items: flex-end; z-index: 10;
+        }
+        .modal-content {
+            background: white; width: 100%; padding: 24px;
+            border-radius: 24px 24px 0 0; animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .close-btn { background: none; border: none; font-size: 20px; color: #6b7280; cursor: pointer; }
+
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; color: #4b5563; margin-bottom: 6px; }
+        .input-group input, .input-group select {
+            width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px;
+            font-size: 14px; background: #f9fafb; outline: none; transition: border 0.2s;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: #2563eb; }
+
+        .btn-primary {
+            width: 100%; background: #2563eb; color: white; border: none;
+            padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s; margin-top: 8px;
+        }
+        .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        /* --- SUCCESS STATE --- */
+        .success-view { display: none; text-align: center; padding: 20px 0; }
+        .success-icon { font-size: 48px; margin-bottom: 12px; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+        .success-title { font-size: 18px; font-weight: 700; color: #065f46; margin-bottom: 6px; }
+        .success-subtitle { font-size: 13px; color: #6b7280; line-height: 1.4; }
+
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-top">
+            <div class="logo">Fixed Pay</div>
+            <div class="offline-badge">Offline Ready</div>
+        </div>
+        <div class="school-name">Rubaga Junior School</div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Collected</div>
+                <div class="stat-value">482</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value" id="pendingCount">18</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+        <div class="section-title">
+            <span>Recent Transactions</span>
+            <span style="color: #2563eb; font-size: 12px; cursor: pointer;">View All</span>
+        </div>
+
+        <ul class="student-list">
+            <li class="student-item">
+                <div class="student-info">
+                    <h4>Jane Akello - P.6</h4>
+                    <p>MTN • 10:24 AM • UGX 150,000</p>
+                </div>
+                <span class="badge badge-paid">PAID</span>
+            </li>
+            
+            <!-- THE TARGET STUDENT -->
+            <li class="student-item" id="targetStudent" style="border-color: #fca5a5; background: #fef2f2;">
+                <div class="student-info">
+                    <h4>Musa Kato - P.4</h4>
+                    <p id="musaStatusText">Waiting for MoMo match...</p>
+                </div>
+                <span class="badge badge-pending" id="musaBadge">PENDING</span>
+            </li>
+
+            <li class="student-item">
+                <div class="student-info">
+                    <h4>Sarah Nambi - P.2</h4>
+                    <p>Airtel • 09:15 AM • UGX 150,000</p>
+                </div>
+                <span class="badge badge-paid">PAID</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- FLOATING ACTION BUTTON -->
+    <button class="fab" onclick="openModal()">+</button>
+
+    <!-- RECONCILE MODAL -->
+    <div class="modal-overlay" id="reconcileModal">
+        <div class="modal-content">
+            <!-- INPUT VIEW -->
+            <div id="inputView">
+                <div class="modal-header">
+                    <div class="modal-title">Reconcile Payment</div>
+                    <button class="close-btn" onclick="closeModal()">✕</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Network</label>
+                    <select id="networkSelect">
+                        <option value="MTN">MTN Mobile Money</option>
+                        <option value="Airtel">Airtel Money</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label>Student Reference Code</label>
+                    <input type="text" id="refCode" placeholder="e.g., RJS-P4-001" value="RJS-P4-001">
+                </div>
+
+                <button class="btn-primary" id="verifyBtn" onclick="processPayment()">Verify & Match</button>
+            </div>
+
+            <!-- SUCCESS VIEW -->
+            <div class="success-view" id="successView">
+                <div class="success-icon">✅</div>
+                <div class="success-title">Matched Successfully!</div>
+                <div class="success-subtitle">
+                    Payment verified for <strong>Musa Kato (P.4)</strong>.<br>
+                    Digital receipt sent to parent via WhatsApp.
+                </div>
+                <button class="btn-primary" style="margin-top: 20px;" onclick="closeModal()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal() {
+        document.getElementById('reconcileModal').style.display = 'flex';
+        // Reset to input view
+        document.getElementById('inputView').style.display = 'block';
+        document.getElementById('successView').style.display = 'none';
+        document.getElementById('verifyBtn').innerText = 'Verify & Match';
+        document.getElementById('verifyBtn').disabled = false;
+    }
+
+    function closeModal() {
+        document.getElementById('reconcileModal').style.display = 'none';
+    }
+
+    function processPayment() {
+        const btn = document.getElementById('verifyBtn');
+        const refCode = document.getElementById('refCode').value;
+
+        // Basic validation
+        if(refCode.toUpperCase() !== 'RJS-P4-001') {
+            alert('Invalid Reference Code. Try: RJS-P4-001');
+            return;
+        }
+
+        // Simulate processing
+        btn.innerText = 'Searching Database...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            // Switch to success view
+            document.getElementById('inputView').style.display = 'none';
+            document.getElementById('successView').style.display = 'block';
+
+            // Update the dashboard in the background
+            const musaRow = document.getElementById('targetStudent');
+            const musaBadge = document.getElementById('musaBadge');
+            const musaText = document.getElementById('musaStatusText');
+            const pendingCount = document.getElementById('pendingCount');
+
+            musaRow.style.borderColor = '#a7f3d0';
+            musaRow.style.background = '#ecfdf5';
+            musaText.innerText = 'MTN • Just now • UGX 150,000';
+            musaBadge.innerText = 'PAID';
+            musaBadge.className = 'badge badge-paid';
+            
+            pendingCount.innerText = '17'; // Decrement pending count
+
+        }, 1200); // 1.2 second delay for dramatic effect
+    }
+</script>
+
+</body>
+</html>
