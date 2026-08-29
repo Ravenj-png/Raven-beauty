@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixed Pay - School Management</title>
+    <title>Fixed Pay - Live Financial Demo</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #10b981;
-            --danger: #ef4444;
-            --bg: #f3f4f6;
-            --text: #1f2937;
-            --gray: #6b7280;
-            --border: #e5e7eb;
+            --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981;
+            --danger: #ef4444; --warning: #f59e0b; --bg: #f3f4f6; --text: #1f2937;
+            --gray: #6b7280; --border: #e5e7eb;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -24,18 +19,15 @@
             border: 8px solid #111827; position: relative; display: flex; flex-direction: column;
         }
 
-        /* HEADER */
         .header { background: var(--primary); color: white; padding: 20px; padding-top: 30px; }
         .header h1 { font-size: 20px; font-weight: 800; }
         .header p { font-size: 12px; opacity: 0.9; margin-top: 4px; }
 
-        /* MAIN CONTENT AREA */
         .content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px; }
         .view { display: none; }
         .view.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* DASHBOARD STATS */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .stat-card { background: #f9fafb; padding: 15px; border-radius: 12px; border: 1px solid var(--border); }
         .stat-label { font-size: 11px; color: var(--gray); text-transform: uppercase; font-weight: 600; }
@@ -43,40 +35,47 @@
         .stat-value.green { color: var(--success); }
         .stat-value.red { color: var(--danger); }
 
-        /* LISTS & CARDS */
         .section-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border); }
-        .item-info h4 { font-size: 14px; font-weight: 600; }
-        .item-info p { font-size: 11px; color: var(--gray); margin-top: 2px; }
+        
+        .list-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px; background: #f9fafb; border-radius: 10px; margin-bottom: 10px; 
+            border: 1px solid var(--border); cursor: pointer; transition: 0.2s;
+        }
+        .list-item:active { background: #f3f4f6; }
+        .item-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .item-info p { font-size: 11px; color: var(--gray); }
+        .financials { font-size: 11px; margin-top: 6px; display: flex; gap: 10px; }
+        .fin-paid { color: var(--success); font-weight: 600; }
+        .fin-balance { color: var(--danger); font-weight: 600; }
+        
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
         .badge-paid { background: #d1fae5; color: #065f46; }
+        .badge-partial { background: #fef3c7; color: #92400e; }
         .badge-unpaid { background: #fee2e2; color: #991b1b; }
 
-        /* FORMS */
+        .search-bar {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+            font-size: 14px; outline: none; margin-bottom: 15px; background: #f9fafb;
+        }
+
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--gray); margin-bottom: 6px; }
         .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; }
-        .form-group input:focus { border-color: var(--primary); }
-        .generated-code { background: #eff6ff; color: var(--primary); padding: 12px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 16px; margin-top: 10px; display: none; }
-
-        /* BUTTONS */
+        
         .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:active { background: var(--primary-dark); }
-        .btn-success { background: var(--success); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 10px; }
 
-        /* BOTTOM NAVIGATION */
         .bottom-nav {
             position: absolute; bottom: 0; width: 100%; background: white;
             border-top: 1px solid var(--border); display: flex; justify-content: space-around;
-            padding: 12px 0; padding-bottom: 20px; /* Safe area for mobile */
+            padding: 12px 0; padding-bottom: 20px;
         }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--gray); font-size: 10px; font-weight: 600; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
         .nav-icon { font-size: 20px; margin-bottom: 4px; }
 
-        /* MODAL */
         .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; }
         .modal-content { background: white; padding: 24px; border-radius: 20px; width: 85%; text-align: center; }
     </style>
@@ -84,215 +83,190 @@
 <body>
 
 <div class="app-container">
-    <!-- HEADER -->
     <div class="header">
         <h1>Fixed Pay</h1>
         <p>Rubaga Junior School • Term 2, 2026</p>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="content">
-        
         <!-- VIEW 1: DASHBOARD -->
         <div id="view-dashboard" class="view active">
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Total Students</div>
-                    <div class="stat-value" id="stat-total">482</div>
+                    <div class="stat-value" id="stat-total">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Fully Paid</div>
-                    <div class="stat-value green" id="stat-paid">464</div>
+                    <div class="stat-value green" id="stat-paid">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Pending</div>
-                    <div class="stat-value red" id="stat-pending">18</div>
+                    <div class="stat-label">Outstanding Bal</div>
+                    <div class="stat-value red" id="stat-balance">0 UGX</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Collected (UGX)</div>
-                    <div class="stat-value" style="font-size: 18px;">72.4M</div>
+                    <div class="stat-label">Collected</div>
+                    <div class="stat-value green" id="stat-collected">0 UGX</div>
                 </div>
             </div>
-
             <div class="section-title">Recent Activity</div>
-            <div class="list-item">
-                <div class="item-info">
-                    <h4>Jane Akello - P.6</h4>
-                    <p>MTN • 10:24 AM • 150,000</p>
-                </div>
-                <span class="badge badge-paid">PAID</span>
-            </div>
-            <div class="list-item">
-                <div class="item-info">
-                    <h4>Musa Kato - P.4</h4>
-                    <p>Waiting for payment...</p>
-                </div>
-                <span class="badge badge-unpaid">PENDING</span>
-            </div>
+            <div id="recent-activity-list"></div>
         </div>
 
-        <!-- VIEW 2: STUDENTS (ADD/REGISTER) -->
+        <!-- VIEW 2: STUDENTS -->
         <div id="view-students" class="view">
-            <div class="section-title">
-                <span>Student Registry</span>
-                <span style="color: var(--primary); font-size: 12px;">482 Total</span>
-            </div>
-            
-            <div style="background: #f9fafb; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px;">
-                <div class="form-group">
-                    <label>Student Full Name</label>
-                    <input type="text" id="new-name" placeholder="e.g. John Doe">
-                </div>
-                <div class="form-group">
-                    <label>Class / Grade</label>
-                    <select id="new-class">
-                        <option>Primary 1</option><option>Primary 2</option><option>Primary 3</option>
-                        <option>Primary 4</option><option>Primary 5</option><option>Primary 6</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Parent Phone Number</label>
-                    <input type="tel" id="new-phone" placeholder="077...">
-                </div>
-                <button class="btn btn-primary" onclick="generateCode()">Generate Reference Code</button>
-                <div class="generated-code" id="gen-code-display"></div>
-                <button class="btn btn-success" id="btn-save-student" style="display:none; margin-top:10px;" onclick="saveStudent()">Save to Registry</button>
-            </div>
-
-            <div class="section-title">Recently Added</div>
-            <div id="recent-students-list">
-                <!-- Dynamic list will appear here -->
-            </div>
+            <div class="section-title"><span>Student Registry</span></div>
+            <input type="text" class="search-bar" id="search-students" placeholder="🔍 Search by name or code..." onkeyup="renderRegistry()">
+            <div id="full-student-list"></div>
         </div>
 
         <!-- VIEW 3: PAYMENTS -->
         <div id="view-payments" class="view">
-            <div class="section-title">Collect Payments</div>
-            <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;">Select a student to process MTN/Airtel payment.</p>
-            
-            <div class="list-item" style="cursor: pointer;" onclick="openPayModal('Musa Kato', 'P.4', 'RJS-P4-001')">
-                <div class="item-info">
-                    <h4>Musa Kato - P.4</h4>
-                    <p>Code: RJS-P4-001 • 150,000 UGX</p>
-                </div>
-                <span class="badge badge-unpaid">COLLECT</span>
-            </div>
-            <div class="list-item" style="cursor: pointer;">
-                <div class="item-info">
-                    <h4>Peter Okello - P.2</h4>
-                    <p>Code: RJS-P2-045 • 150,000 UGX</p>
-                </div>
-                <span class="badge badge-unpaid">COLLECT</span>
-            </div>
+            <div class="section-title"><span>Collect Payments</span></div>
+            <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;">Tap a student to process payment.</p>
+            <div id="payment-list"></div>
         </div>
-
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchView('dashboard', this)">
-            <div class="nav-icon">📊</div>
-            <span>Dashboard</span>
-        </div>
-        <div class="nav-item" onclick="switchView('students', this)">
-            <div class="nav-icon">👥</div>
-            <span>Students</span>
-        </div>
-        <div class="nav-item" onclick="switchView('payments', this)">
-            <div class="nav-icon">💸</div>
-            <span>Payments</span>
-        </div>
+        <div class="nav-item active" onclick="switchView('dashboard', this)"><div class="nav-icon">📊</div><span>Dashboard</span></div>
+        <div class="nav-item" onclick="switchView('students', this)"><div class="nav-icon"></div><span>Students</span></div>
+        <div class="nav-item" onclick="switchView('payments', this)"><div class="nav-icon">💸</div><span>Payments</span></div>
     </div>
 
     <!-- PAYMENT MODAL -->
     <div class="modal" id="payModal">
         <div class="modal-content">
-            <h3 style="margin-bottom: 10px;">Process Payment</h3>
-            <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;" id="modal-student-name">Student Name</p>
-            
+            <h3 style="margin-bottom: 5px;">Process Payment</h3>
+            <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;" id="modal-student-info"></p>
             <div class="form-group" style="text-align: left;">
-                <label>Network</label>
-                <select><option>MTN Mobile Money</option><option>Airtel Money</option></select>
+                <label>Amount to Pay (UGX)</label>
+                <input type="number" id="pay-amount" placeholder="e.g. 150000">
             </div>
-            <div class="form-group" style="text-align: left;">
-                <label>Amount (UGX)</label>
-                <input type="number" value="150000">
-            </div>
-            
-            <button class="btn btn-primary" onclick="completePayment()">Send MoMo Prompt</button>
+            <button class="btn btn-primary" onclick="confirmPayment()">Confirm & Send MoMo Prompt</button>
             <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
         </div>
     </div>
-
 </div>
 
 <script>
-    // Navigation Logic
+    // --- LIVE DATABASE ---
+    const STANDARD_FEE = 500000;
+    let students = [
+        { id: 1, name: "Musa Kato", class: "P.4", code: "RJS-P4-001", phone: "0772123456", totalFee: STANDARD_FEE, paid: 0 },
+        { id: 2, name: "Jane Akello", class: "P.6", code: "RJS-P6-042", phone: "0701987654", totalFee: STANDARD_FEE, paid: 500000 },
+        { id: 3, name: "Peter Okello", class: "P.2", code: "RJS-P2-045", phone: "0753111222", totalFee: STANDARD_FEE, paid: 200000 },
+        { id: 4, name: "Sarah Nambi", class: "P.2", code: "RJS-P2-012", phone: "0772999888", totalFee: STANDARD_FEE, paid: 500000 },
+        { id: 5, name: "David Ochieng", class: "P.5", code: "RJS-P5-088", phone: "0701555444", totalFee: STANDARD_FEE, paid: 100000 }
+    ];
+    let currentPayId = null;
+
+    // --- HELPERS ---
+    const formatMoney = (amount) => new Intl.NumberFormat('en-UG').format(amount) + ' UGX';
+    const getStatus = (s) => s.paid >= s.totalFee ? 'Paid' : (s.paid > 0 ? 'Partial' : 'Unpaid');
+    const getBalance = (s) => Math.max(0, s.totalFee - s.paid);
+
+    // --- NAVIGATION ---
     function switchView(viewName, navElement) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-' + viewName).classList.add('active');
-        
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         navElement.classList.add('active');
+        renderAll(); // Refresh data when switching tabs
     }
 
-    // Add Student Logic
-    function generateCode() {
-        const name = document.getElementById('new-name').value;
-        const cls = document.getElementById('new-class').value;
-        if(!name) { alert('Please enter a name'); return; }
-        
-        const randomId = Math.floor(Math.random() * 900) + 100;
-        const code = `RJS-${cls.replace('Primary ', 'P')}-${randomId}`;
-        
-        document.getElementById('gen-code-display').innerText = code;
-        document.getElementById('gen-code-display').style.display = 'block';
-        document.getElementById('btn-save-student').style.display = 'block';
+    // --- RENDER FUNCTIONS ---
+    function renderAll() {
+        renderDashboard();
+        renderRegistry();
+        renderPaymentList();
     }
 
-    function saveStudent() {
-        const name = document.getElementById('new-name').value;
-        const cls = document.getElementById('new-class').value;
-        const code = document.getElementById('gen-code-display').innerText;
-        
-        const list = document.getElementById('recent-students-list');
-        list.innerHTML = `
-            <div class="list-item">
+    function renderDashboard() {
+        const total = students.length;
+        const paidCount = students.filter(s => getStatus(s) === 'Paid').length;
+        const totalCollected = students.reduce((sum, s) => sum + s.paid, 0);
+        const totalBalance = students.reduce((sum, s) => sum + getBalance(s), 0);
+
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-paid').innerText = paidCount;
+        document.getElementById('stat-collected').innerText = formatMoney(totalCollected);
+        document.getElementById('stat-balance').innerText = formatMoney(totalBalance);
+
+        // Recent Activity (Last 3)
+        const recent = students.slice(-3).reverse();
+        document.getElementById('recent-activity-list').innerHTML = recent.map(s => `
+            <div class="list-item" style="cursor: default;">
                 <div class="item-info">
-                    <h4>${name} - ${cls}</h4>
-                    <p>Code: ${code} • Just added</p>
+                    <h4>${s.name} - ${s.class}</h4>
+                    <p>${s.paid > 0 ? 'Paid ' + formatMoney(s.paid) : 'No payment yet'}</p>
                 </div>
-                <span class="badge badge-unpaid">NEW</span>
+                <span class="badge badge-${getStatus(s).toLowerCase()}">${getStatus(s).toUpperCase()}</span>
             </div>
-        ` + list.innerHTML;
-        
-        alert('Student saved successfully! Reference code generated.');
-        // Reset form
-        document.getElementById('new-name').value = '';
-        document.getElementById('gen-code-display').style.display = 'none';
-        document.getElementById('btn-save-student').style.display = 'none';
+        `).join('');
     }
 
-    // Payment Logic
-    function openPayModal(name, cls, code) {
-        document.getElementById('modal-student-name').innerText = `${name} (${cls}) | Ref: ${code}`;
+    function renderRegistry() {
+        const query = document.getElementById('search-students').value.toLowerCase();
+        const filtered = students.filter(s => s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query));
+        
+        document.getElementById('full-student-list').innerHTML = filtered.map(s => `
+            <div class="list-item" style="cursor: default;">
+                <div class="item-info">
+                    <h4>${s.name} - ${s.class}</h4>
+                    <p>Code: ${s.code}</p>
+                    <div class="financials">
+                        <span class="fin-paid">Paid: ${formatMoney(s.paid)}</span>
+                        <span class="fin-balance">Bal: ${formatMoney(getBalance(s))}</span>
+                    </div>
+                </div>
+                <span class="badge badge-${getStatus(s).toLowerCase()}">${getStatus(s).toUpperCase()}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderPaymentList() {
+        const pending = students.filter(s => getBalance(s) > 0);
+        document.getElementById('payment-list').innerHTML = pending.map(s => `
+            <div class="list-item" onclick="openPayModal(${s.id})">
+                <div class="item-info">
+                    <h4>${s.name} - ${s.class}</h4>
+                    <p>Code: ${s.code} • Balance: ${formatMoney(getBalance(s))}</p>
+                </div>
+                <span class="badge badge-unpaid">COLLECT</span>
+            </div>
+        `).join('');
+    }
+
+    // --- PAYMENT LOGIC ---
+    function openPayModal(id) {
+        const student = students.find(s => s.id === id);
+        currentPayId = id;
+        document.getElementById('modal-student-info').innerText = `${student.name} (${student.class}) | Balance: ${formatMoney(getBalance(student))}`;
+        document.getElementById('pay-amount').value = getBalance(student); // Auto-fill balance
         document.getElementById('payModal').style.display = 'flex';
     }
 
     function closeModal() {
         document.getElementById('payModal').style.display = 'none';
+        currentPayId = null;
     }
 
-    function completePayment() {
+    function confirmPayment() {
+        const amount = parseInt(document.getElementById('pay-amount').value);
+        if (!amount || amount <= 0) { alert('Enter a valid amount'); return; }
+
+        const student = students.find(s => s.id === currentPayId);
+        student.paid += amount;
+        if (student.paid > student.totalFee) student.paid = student.totalFee; // Cap at total fee
+
         closeModal();
-        alert('✅ Payment Successful!\n\nMoMo prompt confirmed.\nDigital receipt sent to parent.\nDashboard updated.');
-        
-        // Update stats visually
-        const pending = document.getElementById('stat-pending');
-        const paid = document.getElementById('stat-paid');
-        pending.innerText = parseInt(pending.innerText) - 1;
-        paid.innerText = parseInt(paid.innerText) + 1;
+        alert(`✅ Payment Successful!\n\n${formatMoney(amount)} received for ${student.name}.\nDigital receipt sent to ${student.phone}.\nRegistry updated.`);
+        renderAll(); // Live update the UI
     }
+
+    // Initialize
+    renderAll();
 </script>
 
 </body>
